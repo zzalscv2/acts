@@ -1,0 +1,74 @@
+name: Sonar Cloud
+
+on:
+  push:
+  pull_request:
+    branches:
+      - main
+      - 'release/**'
+      - 'develop/**'
+    paths-ignore:
+      - "docs/**"
+
+jobs:
+  sonarUbuntu:
+    name: Sonar-Ubuntu
+    runs-on: ubuntu-latest
+    env:
+      SONAR_SCANNER_VERSION: 5.0
+      SONAR_SERVER_URL: "https://sonarcloud.io"
+      BUILD_WRAPPER_OUT_DIR: build_wrapper_output_directory # Directory where build-wrapper output will be placed
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: 'oracle'
+      - name: Set up Python 3.9 for gcovr
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+      - name: Install Boost
+        run: |
+             sudo apt-get update
+             sudo apt-get install -y libboost-all-dev
+      - name: install gcovr 5.0
+        run: |
+          pip install gcovr==5.0 # 5.1 is not supported
+      - name: Install sonar-scanner
+        uses: SonarSource/sonarcloud-github-c-cpp@v2
+        
+      - name: Run build-wrapper
+        run: |
+          mkdir build-linux
+          cmake -S . -B build-linux -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -D ACTS_USE_SYSTEM_BOOST=OFF -D ACTS_USE_SYSTEM_EIGEN3=OFF -D ACTS_BUILD_UNITTESTS=ON -D ACTS_BUILD_INTEGRATIONTESTS=ON -DCMAKE_CXX_FLAGS="--coverage"
+          pwd
+          ls
+          build-wrapper-linux-x86-64 --out-dir ${{ env.BUILD_WRAPPER_OUT_DIR }}  cmake --build build-linux --clean-first -j $(nproc)
+          
+
+      - name: Run tests to generate coverage statistics
+        run: |
+          find ./build-linux/bin -maxdepth 1 -name "*Test*" -executable -exec '{}' ';'
+      - name: List coverage files
+        run: find ./build-linux -name "*.gcda" -or -name "*.gcno"
+        
+      - name: Collect coverage into one XML report
+        run: |
+          gcovr --sonarqube > coverage.xml
+          gcovr --sonarqube --root=build-linux --output=coverage.xml  --filter="^/home/runner/work/acts/acts/"
+          
+      - name: Verify XML reprt
+        run: cat coverage.xml
+          
+      - name: Run sonar-scanner
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          sonar-scanner \
+            -Dsonar.cfamily.compile-commands=/home/runner/work/acts/acts/build-linux/compile_commands.json \
+            --define sonar.coverageReportPaths=coverage.xml

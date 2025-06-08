@@ -14,13 +14,13 @@ cramjam==2.10.0
     # via uproot
 execnet==2.1.1
     # via pytest-xdist
-fsspec==2025.3.2
+fsspec==2025.5.1
     # via
     #   awkward
     #   uproot
 iniconfig==2.1.0
     # via pytest
-numpy==2.2.6
+numpy==2.3.0
     # via
     #   awkward
     #   awkward-cpp
@@ -32,14 +32,16 @@ packaging==25.0
     #   uproot
 pluggy==1.6.0
     # via pytest
-pytest==8.3.5
+pygments==2.19.1
+    # via pytest
+pytest==8.4.0
     # via
     #   -r Examples/Python/tests/requirements.in
     #   pytest-check
     #   pytest-xdist
 pytest-check==2.5.3
     # via -r Examples/Python/tests/requirements.in
-pytest-xdist==3.6.1
+pytest-xdist==3.7.0
     # via -r Examples/Python/tests/requirements.in
 pyyaml==6.0.2
     # via -r Examples/Python/tests/requirements.in

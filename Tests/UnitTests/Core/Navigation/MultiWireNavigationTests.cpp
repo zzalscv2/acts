@@ -9,6 +9,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include "Acts/Definitions/Algebra.hpp"
+#include "Acts/Geometry/GeometryContext.hpp"
 #include "Acts/Geometry/MultiWireVolumeBuilder.hpp"
 #include "Acts/Geometry/TrapezoidPortalShell.hpp"
 #include "Acts/Geometry/TrapezoidVolumeBounds.hpp"
@@ -25,7 +26,7 @@ using namespace Acts;
 using namespace Acts::Experimental;
 using namespace Acts::detail;
 
-GeometryContext tContext;
+auto tContext = GeometryContext::dangerouslyDefaultConstruct();
 constexpr std::size_t nSurfacesX = 15;
 constexpr std::size_t nSurfacesY = 4;
 constexpr double radius = 15.0;
@@ -60,7 +61,7 @@ void generateStrawSurfaces(
 
       element->surface().assignGeometryId(GeometryIdentifier(id++));
 
-      element->surface().assignDetectorElement(*element);
+      element->surface().assignSurfacePlacement(*element);
 
       strawSurfaces.push_back(element->surface().getSharedPtr());
     }
@@ -123,7 +124,7 @@ BOOST_AUTO_TEST_CASE(MultiLayer_NavigationPolicy) {
   auto navFactory = mwBuilder.createNavigationPolicyFactory();
   volume->setNavigationPolicy(navFactory->build(tContext, *volume, *logger));
 
-  volume->initializeNavigationCandidates(args, stream, *logger);
+  volume->initializeNavigationCandidates(tContext, args, stream, *logger);
 
   // we expect 18 candidates (12 surfaces + 6 portals)
   BOOST_CHECK_EQUAL(main.candidates().size(), 18u);
@@ -141,7 +142,7 @@ BOOST_AUTO_TEST_CASE(MultiLayer_NavigationPolicy) {
   args.direction = startDir;
   // clear the candidates and re initialize with new arguments
   main.candidates().clear();
-  volume->initializeNavigationCandidates(args, stream, *logger);
+  volume->initializeNavigationCandidates(tContext, args, stream, *logger);
   // we expect 18 candidates (12 surfaces + 6 portals)
   BOOST_CHECK_EQUAL(main.candidates().size(), 18u);
 }

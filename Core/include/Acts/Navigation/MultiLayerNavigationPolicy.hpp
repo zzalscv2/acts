@@ -8,11 +8,9 @@
 
 #pragma once
 
-#include "Acts/Geometry/IndexGridFiller.hpp"
-#include "Acts/Geometry/ReferenceGenerators.hpp"
+#include "Acts/Geometry/IndexGrid.hpp"
 #include "Acts/Geometry/TrackingVolume.hpp"
 #include "Acts/Navigation/INavigationPolicy.hpp"
-#include "Acts/Navigation/IndexGridNavigation.hpp"
 #include "Acts/Navigation/NavigationStream.hpp"
 #include "Acts/Surfaces/detail/IntersectionHelper2D.hpp"
 #include "Acts/Utilities/Grid.hpp"
@@ -28,8 +26,9 @@ class MultiLayerNavigationPolicy : public INavigationPolicy {
   using GridType = Grid<std::vector<std::size_t>,
                         Axis<AxisType::Equidistant, AxisBoundaryType::Bound>,
                         Axis<AxisType::Equidistant, AxisBoundaryType::Bound>>;
+
   /// Type alias for indexed surfaces navigation updater
-  using IndexedUpdatorType = IndexGridNavigation<GridType>;
+  using IndexedUpdatorType = IndexGrid<GridType>;
 
   struct Config {
     // The binning expansion for grid neighbor lookups
@@ -51,10 +50,12 @@ class MultiLayerNavigationPolicy : public INavigationPolicy {
                                       IndexedUpdatorType grid);
 
   /// Update the navigation state from the surface array
+  /// @param gctx The geometry context
   /// @param args The navigation arguments
   /// @param stream The navigation stream to update
   /// @param logger The logger
-  void initializeCandidates(const NavigationArguments& args,
+  void initializeCandidates(const GeometryContext& gctx,
+                            const NavigationArguments& args,
                             AppendOnlyNavigationStream& stream,
                             const Logger& logger) const;
 

@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include "Acts/Definitions/Tolerance.hpp"
 #include "Acts/Geometry/GeometryIdentifier.hpp"
 #include "Acts/Geometry/Layer.hpp"
 #include "Acts/Geometry/TrackingGeometry.hpp"
@@ -23,7 +22,6 @@
 #include "Acts/Utilities/Logger.hpp"
 #include "Acts/Utilities/Result.hpp"
 
-#include <map>
 #include <optional>
 #include <string>
 
@@ -35,7 +33,7 @@ namespace Acts {
 ///
 /// @tparam object_t Type of the object for navigation to check against
 template <typename object_t>
-struct NavigationOptions {
+struct NavigationOptions final {
   /// The boundary check directive
   BoundaryTolerance boundaryTolerance = BoundaryTolerance::None();
 
@@ -78,7 +76,7 @@ struct NavigationOptions {
 /// `state.currentSurface` pointer is set. This actors to observe
 /// that we are on a surface.
 ///
-class Navigator {
+class Navigator final {
  public:
   /// Type alias for navigation surface candidates container
   using NavigationSurfaces =
@@ -94,9 +92,6 @@ class Navigator {
   /// Type alias for generic navigation candidates container
   using NavigationCandidates =
       boost::container::small_vector<NavigationTarget, 10>;
-
-  /// Type alias for external surfaces container
-  using ExternalSurfaces = std::vector<GeometryIdentifier>;
 
   /// Type alias for geometry version enumeration
   using GeometryVersion = TrackingGeometry::GeometryVersion;
@@ -129,43 +124,6 @@ class Navigator {
     explicit Options(const GeometryContext& gctx)
         : NavigatorPlainOptions(gctx) {}
 
-    /// The surface tolerance
-    double surfaceTolerance = s_onSurfaceTolerance;
-
-    /// The near limit to resolve surfaces
-    double nearLimit = s_onSurfaceTolerance;
-
-    /// The far limit to resolve surfaces
-    double farLimit = std::numeric_limits<double>::max();
-
-    /// Externally provided surfaces - these are tried to be hit
-    ExternalSurfaces externalSurfaces = {};
-    /// Surfaces that are not part of the tracking geometry
-    std::vector<const Surface*> freeSurfaces = {};
-
-    /// Insert an external surface to be considered during navigation
-    /// @param surface: The surface to add to the list
-    void insertExternalSurface(const Surface& surface) {
-      if (surface.geometryId() != GeometryIdentifier{}) {
-        externalSurfaces.push_back(surface.geometryId());
-      } else {
-        freeSurfaces.push_back(&surface);
-      }
-    }
-    /// @brief Delegate to decide whether free surfaces are appended to the navigation
-    ///        stream given the current volume and the track coordinates. If the
-    ///        delegate is set, it is called in each candidate resolution step
-    ///        for each surface that has not been marked as reached yet.
-    /// @param gctx: Current geometry context carrying the alignment information
-    /// @param currentVol: The current tracking volume in which the propagator resides
-    /// @param pos: Position of the track in global coordinates
-    /// @param dir: Direction vector of the track
-    /// @param surface: Free surface candidate to test
-    using FreeSurfaceSelctor_t = Delegate<bool(
-        const GeometryContext& gctx, const TrackingVolume& currentVol,
-        const Vector3& pos, const Vector3& dir, const Surface& candidate)>;
-    /// Delegate for selecting free surfaces during navigation
-    FreeSurfaceSelctor_t freeSurfaceSelector{};
     /// Set the plain navigation options
     /// @param options The plain navigator options to set
     void setPlainOptions(const NavigatorPlainOptions& options) {
@@ -266,6 +224,9 @@ class Navigator {
     /// Stream for navigation debugging and monitoring
     NavigationStream stream;
 
+    /// Surfaces that are not part of the tracking geometry
+    std::vector<const Surface*> freeSurfaces;
+
     /// Reset navigation state after switching layers
     void resetAfterLayerSwitch() {
       navSurfaces.clear();
@@ -284,10 +245,12 @@ class Navigator {
       navCandidateIndex.reset();
 
       currentLayer = nullptr;
+
+      policyStateManager.reset();
     }
 
     /// Completely reset navigation state to initial conditions
-    void reset() {
+    void resetForRenavigation() {
       resetAfterVolumeSwitch();
 
       currentVolume = nullptr;
@@ -295,11 +258,14 @@ class Navigator {
 
       navigationBreak = false;
       navigationStage = Stage::initial;
+
       // Set the surface reached switches back to false
       std::ranges::for_each(freeCandidates,
                             [](std::pair<const Surface*, bool>& freeSurface) {
                               freeSurface.second = false;
                             });
+
+      stream.reset();
     }
   };
 

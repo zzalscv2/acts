@@ -1,10 +1,6 @@
 acts_add_library(
     PluginDetray
     src/DetrayConversionUtils.cpp
-    #src/DetrayConverter.cpp
-    #src/DetrayGeometryConverter.cpp
-    #src/DetrayMaterialConverter.cpp
-    #src/DetraySurfaceGridsConverter.cpp
     src/DetrayPayloadConverter.cpp
     src/DetrayMaterial.cpp
     src/DetrayNavigation.cpp
@@ -28,7 +24,6 @@ target_link_libraries(
         detray::core_array
         detray::io
         detray::detectors
-        detray::test_utils
         detray::svgtools
         vecmem::core
 )

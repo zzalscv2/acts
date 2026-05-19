@@ -13,6 +13,7 @@
 #include "Acts/Surfaces/ConeSurface.hpp"
 #include "Acts/Surfaces/CylinderBounds.hpp"
 #include "Acts/Surfaces/CylinderSurface.hpp"
+#include "Acts/Surfaces/DiamondBounds.hpp"
 #include "Acts/Surfaces/DiscSurface.hpp"
 #include "Acts/Surfaces/DiscTrapezoidBounds.hpp"
 #include "Acts/Surfaces/EllipseBounds.hpp"
@@ -45,6 +46,8 @@ std::string getSurfaceBoundsKind() {
     return "Rectangle";
   } else if (std::is_same_v<bounds_t, Acts::TrapezoidBounds>) {
     return "Trapezoid";
+  } else if (std::is_same_v<bounds_t, Acts::DiamondBounds>) {
+    return "Diamond";
   } else if (std::is_same_v<bounds_t, Acts::AnnulusBounds>) {
     return "Annulus";
   } else if (std::is_same_v<bounds_t, Acts::RadialBounds>) {
@@ -210,6 +213,8 @@ Acts::SurfaceJsonConverter::Config::defaultConfig() {
   cfg.surfaceBoundsEncoder.registerFunction(
       surfaceBoundsToJsonT<TrapezoidBounds>);
   cfg.surfaceBoundsEncoder.registerFunction(
+      surfaceBoundsToJsonT<DiamondBounds>);
+  cfg.surfaceBoundsEncoder.registerFunction(
       surfaceBoundsToJsonT<AnnulusBounds>);
   cfg.surfaceBoundsEncoder.registerFunction(surfaceBoundsToJsonT<RadialBounds>);
   cfg.surfaceBoundsEncoder.registerFunction(
@@ -231,6 +236,9 @@ Acts::SurfaceJsonConverter::Config::defaultConfig() {
   cfg.surfaceDecoder.registerKind(
       getSurfaceKind<PlaneSurface>() + getSurfaceBoundsKind<TrapezoidBounds>(),
       surfaceFromJsonT<PlaneSurface, TrapezoidBounds>);
+  cfg.surfaceDecoder.registerKind(
+      getSurfaceKind<PlaneSurface>() + getSurfaceBoundsKind<DiamondBounds>(),
+      surfaceFromJsonT<PlaneSurface, DiamondBounds>);
   cfg.surfaceDecoder.registerKind(
       getSurfaceKind<PlaneSurface>() + getSurfaceBoundsKind<InfiniteBounds>(),
       surfaceFromJsonT<PlaneSurface>);
@@ -297,26 +305,5 @@ nlohmann::json Acts::SurfaceJsonConverter::toJson(const GeometryContext& gctx,
   jSurface["bounds"] = jBounds;
   jSurface["kind"] =
       jSurface["kind"].get<std::string>() + jBounds["kind"].get<std::string>();
-  return jSurface;
-}
-
-nlohmann::json Acts::SurfaceJsonConverter::toJsonDetray(
-    const GeometryContext& gctx, const Surface& surface,
-    const Options& options) {
-  nlohmann::json jSurface;
-  const auto& sBounds = surface.bounds();
-  const auto sTransform = surface.localToGlobalTransform(gctx);
-
-  jSurface["transform"] =
-      Transform3JsonConverter::toJson(sTransform, options.transformOptions);
-
-  auto jMask =
-      SurfaceBoundsJsonConverter::toJsonDetray(sBounds, options.portal);
-  jSurface["mask"] = jMask;
-  jSurface["source"] = surface.geometryId().value();
-  jSurface["barcode"] = 0;
-  jSurface["type"] =
-      options.portal ? 0 : (surface.geometryId().sensitive() > 0 ? 1u : 2u);
-
   return jSurface;
 }
